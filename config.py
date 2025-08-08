@@ -3,7 +3,7 @@ class Config:
     MYSQL_HOST = '127.0.0.1'
     MYSQL_PORT = 3306
     MYSQL_USER = 'root'
-    MYSQL_PASSWORD = 'gu681004' #按照自己的SQL密码来！！！
+    MYSQL_PASSWORD = 'SQLPassword' #按照自己的SQL密码来！！！
     MYSQL_DATABASE = 'webapp'
 
     SECRET_KEY = 'booknest-secret-key'  # 你现有的秘钥（用于 Flask session）
