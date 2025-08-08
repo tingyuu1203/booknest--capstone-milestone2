@@ -1,8 +1,7 @@
-# Authentication Routes
-
 from flask import Blueprint, request, jsonify
 from models import User
 import hashlib
+from flask_jwt_extended import create_access_token  # 新增
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -18,7 +17,6 @@ def register():
     try:
         data = request.get_json()
 
-        # Required fields
         required_fields = ["username", "email", "password"]
         for field in required_fields:
             if field not in data:
@@ -26,13 +24,11 @@ def register():
                     {"success": False, "message": f"Missing required field: {field}"}
                 ), 400
 
-        # Check if the email already exists
         existing_user = User.find_by_email(data["email"])
         if existing_user:
             return jsonify({"success": False, "message": "Email already registered"}), 400
 
-        # Create a user
-        hashed_password = data["password"]
+        hashed_password = hash_password(data["password"])  # 改为哈希密码存储
         result = User.create(
             username=data["username"],
             email=data["email"],
@@ -55,7 +51,6 @@ def login():
     try:
         data = request.get_json()
 
-        # Required fields
         required_fields = ["email", "password"]
         for field in required_fields:
             if field not in data:
@@ -63,17 +58,14 @@ def login():
                     {"success": False, "message": f"Missing required field: {field}"}
                 ), 400
 
-        # Find user
         user = User.find_by_email(data["email"])
         if not user:
             return jsonify({"success": False, "message": "Incorrect email or password"}), 401
 
-        # Verify password
-        hashed_password = data["password"]
+        hashed_password = hash_password(data["password"])  # 使用哈希比较密码
         if user["password"] != hashed_password:
             return jsonify({"success": False, "message": "Incorrect email or password"}), 401
 
-        # Return user info (excluding password)
         user_info = {
             "id": user["id"],
             "username": user["username"],
@@ -81,7 +73,15 @@ def login():
             "role": user["role"],
         }
 
-        return jsonify({"success": True, "data": user_info, "message": "Login successful"})
+        # 生成JWT token，identity用user id
+        access_token = create_access_token(identity=user["id"])
+
+        return jsonify({
+            "success": True,
+            "data": user_info,
+            "access_token": access_token,  # 返回token
+            "message": "Login successful"
+        })
 
     except Exception as e:
         return jsonify({"success": False, "message": f"Login failed: {str(e)}"}), 500

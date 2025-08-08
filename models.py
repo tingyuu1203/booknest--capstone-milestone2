@@ -32,6 +32,11 @@ class User:
         result = db.execute_query(query, (user_id,))
         return result[0] if result else None
 
+    @staticmethod
+    def search(query):
+        sql = "SELECT * FROM users WHERE username LIKE %s OR email LIKE %s"
+        pattern = f"%{query}%"
+        return db.execute_query(sql, (pattern, pattern))
 
 class Book:
     """Book model"""
@@ -126,12 +131,13 @@ class BorrowRecord:
 
     @staticmethod
     def get_by_user(user_id):
-        """Get borrowing history by user"""
+        """Get borrowing history by user with book title and author"""
         query = """
-        SELECT br.*, b.title, b.author 
-        FROM borrow_records br 
-        JOIN books b ON br.book_id = b.id 
-        WHERE br.user_id = %s 
+        SELECT br.id, br.user_id, br.book_id, br.borrow_date, br.return_date, br.status, 
+            b.title, b.author 
+        FROM borrow_records br
+        JOIN books b ON br.book_id = b.id
+        WHERE br.user_id = %s
         ORDER BY br.borrow_date DESC
         """
         result = db.execute_query(query, (user_id,))
