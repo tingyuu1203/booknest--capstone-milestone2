@@ -1,15 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models import User
-import hashlib
-from flask_jwt_extended import create_access_token  # 新增
 
 auth_bp = Blueprint("auth", __name__)
-
-
-def hash_password(password):
-    """Simple password hashing"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
 
 @auth_bp.route("/api/auth/register", methods=["POST"])
 def register():
@@ -28,11 +20,10 @@ def register():
         if existing_user:
             return jsonify({"success": False, "message": "Email already registered"}), 400
 
-        hashed_password = hash_password(data["password"])  # 改为哈希密码存储
         result = User.create(
             username=data["username"],
             email=data["email"],
-            password=hashed_password,
+            password=data["password"],  # 明文存储
             role=data.get("role", "user"),
         )
 
@@ -62,8 +53,7 @@ def login():
         if not user:
             return jsonify({"success": False, "message": "Incorrect email or password"}), 401
 
-        hashed_password = hash_password(data["password"])  # 使用哈希比较密码
-        if user["password"] != hashed_password:
+        if user["password"] != data["password"]:  # 直接明文比较
             return jsonify({"success": False, "message": "Incorrect email or password"}), 401
 
         user_info = {
@@ -73,15 +63,12 @@ def login():
             "role": user["role"],
         }
 
-        # 生成JWT token，identity用user id
-        access_token = create_access_token(identity=user["id"])
-
         return jsonify({
             "success": True,
             "data": user_info,
-            "access_token": access_token,  # 返回token
             "message": "Login successful"
         })
 
     except Exception as e:
         return jsonify({"success": False, "message": f"Login failed: {str(e)}"}), 500
+
